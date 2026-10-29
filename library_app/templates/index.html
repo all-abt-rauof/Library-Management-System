@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">L</div>
+                <div>
+                    <h1>Libra</h1>
+                    <span>Library Management</span>
+                </div>
+            </div>
+            <nav>
+                <a class="nav-item active" href="#dashboard"><span>⌂</span> Dashboard</a>
+                <a class="nav-item" href="#books"><span>▤</span> Books</a>
+                <a class="nav-item" href="#add-book"><span>＋</span> Add Book</a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="dot"></span>
+                System online
+            </div>
+        </aside>
+
+        <main class="main-content" id="dashboard">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">LIBRARY DASHBOARD</p>
+                    <h2>Welcome back 👋</h2>
+                    <p class="subtitle">Manage your book collection from one place.</p>
+                </div>
+                <div class="date-chip">📚 In-memory library</div>
+            </header>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="toast-container">
+                        {% for category, message in messages %}
+                            <div class="toast {{ category }}">
+                                <span class="toast-icon">
+                                    {% if category == 'success' %}✓{% elif category == 'borrowed' %}●{% else %}!{% endif %}
+                                </span>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% set total = books|length %}
+            {% set available = books|selectattr('available')|list|length %}
+            {% set borrowed = total - available %}
+
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">▤</div>
+                    <div><span>Total Books</span><strong>{{ total }}</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">✓</div>
+                    <div><span>Available</span><strong>{{ available }}</strong></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">↗</div>
+                    <div><span>Borrowed</span><strong>{{ borrowed }}</strong></div>
+                </div>
+            </section>
+
+            <section class="tools-grid">
+                <div class="panel" id="add-book">
+                    <div class="panel-heading">
+                        <div class="panel-title">
+                            <div class="mini-icon">＋</div>
+                            <div><h3>Add New Book</h3><p>Add a book to your collection</p></div>
+                        </div>
+                    </div>
+                    <form action="{{ url_for('add_book') }}" method="POST" class="form">
+                        <div class="field">
+                            <label for="title">Book Title</label>
+                            <input type="text" id="title" name="title" placeholder="e.g. Atomic Habits" required>
+                        </div>
+                        <div class="field">
+                            <label for="author">Author</label>
+                            <input type="text" id="author" name="author" placeholder="e.g. James Clear" required>
+                        </div>
+                        <button class="primary-btn" type="submit">＋ Add Book</button>
+                    </form>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div class="panel-title">
+                            <div class="mini-icon search">⌕</div>
+                            <div><h3>Check Availability</h3><p>Find a book by its title</p></div>
+                        </div>
+                    </div>
+                    <form action="{{ url_for('check_availability') }}" method="POST" class="form">
+                        <div class="field">
+                            <label for="check-title">Book Title</label>
+                            <input type="text" id="check-title" name="title" placeholder="Enter book title" required>
+                        </div>
+                        <button class="secondary-btn" type="submit">Check Status <span>→</span></button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="panel books-panel" id="books">
+                <div class="books-header">
+                    <div>
+                        <p class="eyebrow">COLLECTION</p>
+                        <h3>All Books</h3>
+                    </div>
+                    <span class="count-badge">{{ total }} book{% if total != 1 %}s{% endif %}</span>
+                </div>
+
+                {% if books %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>BOOK</th><th>AUTHOR</th><th>STATUS</th><th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for book in books %}
+                            <tr>
+                                <td><span class="book-id">#{{ "%02d"|format(book.id) }}</span></td>
+                                <td><span class="book-name">{{ book.title }}</span></td>
+                                <td class="author">{{ book.author }}</td>
+                                <td>
+                                    {% if book.available %}
+                                        <span class="status available"><i></i> Available</span>
+                                    {% else %}
+                                        <span class="status borrowed"><i></i> Borrowed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if book.available %}
+                                    <form action="{{ url_for('borrow_book', book_id=book.id) }}" method="POST">
+                                        <button class="table-btn borrow" type="submit">Borrow</button>
+                                    </form>
+                                    {% else %}
+                                    <form action="{{ url_for('return_book', book_id=book.id) }}" method="POST">
+                                        <button class="table-btn return" type="submit">Return</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">📚</div>
+                    <h4>Your library is empty</h4>
+                    <p>Add your first book using the form above.</p>
+                </div>
+                {% endif %}
+            </section>
+
+            <footer>Libra Library Management System <span>•</span> Built with Flask & HTML5/CSS3</footer>
+        </main>
+    </div>
+</body>
+</html>
